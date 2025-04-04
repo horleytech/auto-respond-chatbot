@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 // Replace with your MongoDB connection string or use an environment variable
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/autoRespondDB";
+const MONGODB_URI = process.env.MONGO_URI || "mongodb://localhost:27017/autoRespondDB";
 
 export async function connectDB() {
   try {
