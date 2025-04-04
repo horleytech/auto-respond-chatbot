@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "openai": "^4.91.1"
+    "openai": "^4.91.1",
+    "react-router-dom": "^7.5.0"
   }
 }

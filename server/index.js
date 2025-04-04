@@ -1,81 +1,68 @@
 import express from "express";
-import { getChatGPTResponse } from "./chatgpt.js";
 import { connectDB } from "./db.js";
 import { Conversation, Rule } from "./models.js";
+import { getChatGPTResponse } from "./chatgpt.js";
+import cors from "cors";
+
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Connect to MongoDB
 connectDB();
-
-// Middleware to parse JSON bodies
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: ["https://auto-respond-chatbot.vercel.app", "https://auto-respond-chatbot-pnzaj9vzt-horleytechs-projects.vercel.app"],
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
+
 
 // ✅ Webhook endpoint
 app.post("/webhook", async (req, res) => {
-  console.log("Webhook received:", req.body);
+  const userMessage = req.body.message?.toLowerCase();
+  if (!userMessage) return res.status(400).send("Missing message in request body");
 
-  const userMessage = req.body.message;
-  const platform = req.body.platform || "whatsapp"; // default if not passed
-
-  if (!userMessage) {
-    return res.status(400).send("Missing message in request body");
-  }
-
-  // Try to find a rule for this platform + trigger
-  const rules = await Rule.find({ platform });
-
-  let matchedRule = null;
+  // Check rules
+  const rules = await Rule.find();
   for (const rule of rules) {
-    if (rule.trigger.some(trigger => userMessage.toLowerCase().includes(trigger.toLowerCase()))) {
-      matchedRule = rule;
-      break;
+    if (rule.trigger.some(trigger => userMessage.includes(trigger.toLowerCase()))) {
+      let reply;
+
+      switch (rule.responseType) {
+        case "text":
+          reply = rule.responseText;
+          break;
+        case "csv":
+          reply = "[CSV handling not yet implemented]";
+          break;
+        case "ai":
+          reply = await getChatGPTResponse(rule.aiInstruction + " " + userMessage);
+          break;
+        default:
+          reply = "Sorry, I don't understand.";
+      }
+
+      await Conversation.create({ userMessage, chatGPTReply: reply });
+      return res.send(reply);
     }
   }
 
-  let reply = "";
-
-  if (matchedRule) {
-    if (matchedRule.responseType === "text") {
-      reply = matchedRule.responseText;
-    } else if (matchedRule.responseType === "ai") {
-      const instruction = matchedRule.aiInstruction || "";
-      reply = await getChatGPTResponse(`${instruction} \nUser said: ${userMessage}`);
-    } else {
-      reply = "CSV response type not yet implemented.";
-    }
-  } else {
-    reply = await getChatGPTResponse(userMessage); // fallback AI
-  }
-
-  // Save the conversation
-  try {
-    const conversation = new Conversation({
-      userMessage,
-      chatGPTReply: reply,
-    });
-    await conversation.save();
-    console.log("Conversation saved to DB");
-  } catch (error) {
-    console.error("Error saving conversation:", error);
-  }
-
-  res.status(200).send(reply);
+  // Fallback to ChatGPT if no rule matched
+  const fallback = await getChatGPTResponse(userMessage);
+  await Conversation.create({ userMessage, chatGPTReply: fallback });
+  res.send(fallback);
 });
 
-// ✅ Logs endpoint
+// Logs
 app.get("/logs", async (req, res) => {
-  try {
-    const conversations = await Conversation.find().sort({ timestamp: -1 });
-    res.json(conversations);
-  } catch (error) {
-    console.error("Error retrieving logs:", error);
-    res.status(500).send("Error retrieving logs");
-  }
+  const conversations = await Conversation.find().sort({ timestamp: -1 });
+  res.json(conversations);
 });
 
-// ✅ Rules: create
+// Create rule
 app.post("/rules", async (req, res) => {
   try {
     const rule = new Rule(req.body);
@@ -87,18 +74,17 @@ app.post("/rules", async (req, res) => {
   }
 });
 
-// ✅ Rules: fetch
+// Get all rules
 app.get("/rules", async (req, res) => {
   try {
     const rules = await Rule.find().sort({ createdAt: -1 });
     res.json(rules);
   } catch (error) {
-    console.error("Error fetching rules:", error);
     res.status(500).send("Error fetching rules");
   }
 });
 
-// ✅ Start the server
+// Start server
 app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });

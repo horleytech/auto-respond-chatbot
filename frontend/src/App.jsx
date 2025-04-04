@@ -1,10 +1,15 @@
-import Logs from "./Logs";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Logs from "./pages/Logs";
+import RulesDashboard from "./pages/RulesDashboard";
 
 function App() {
   return (
-    <div className="min-h-screen bg-white text-black">
-      <Logs />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Logs />} />
+        <Route path="/rules" element={<RulesDashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

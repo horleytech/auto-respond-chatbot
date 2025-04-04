@@ -6,7 +6,7 @@ function Logs() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("https://auto-respond-chatbot.onrender.com/logs")
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/logs`)
       .then(res => res.json())
       .then(data => {
         setLogs(data);
@@ -28,7 +28,6 @@ function Logs() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Conversation Logs</h1>
 
-      {/* ✅ Search Input */}
       <input
         type="text"
         placeholder="Search messages..."
