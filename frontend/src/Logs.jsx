@@ -6,7 +6,7 @@ function Logs() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:3000/logs")
+    fetch("https://auto-respond-chatbot.onrender.com/logs")
       .then(res => res.json())
       .then(data => {
         setLogs(data);
